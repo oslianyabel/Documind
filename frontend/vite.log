@@ -16,3 +16,46 @@
 [2m5:57:08 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/DocumentsPage.tsx[22m
 [2m5:57:16 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/DocumentsPage.tsx[22m
 [2m5:57:26 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles.css[22m
+[2m2:13:20 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Login.tsx, /src/pages/SearchPage.tsx, /src/pages/HistoryPage.tsx, /src/pages/DocumentsPage.tsx[22m
+[2m2:14:17 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/SearchPage.tsx[22m
+[2m2:15:25 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /documents?limit=20&offset=0[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1118:18)
+    at afterConnectMultiple (node:net:1685:7)
+[2m2:15:25 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /documents?limit=20&offset=0[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1118:18)
+    at afterConnectMultiple (node:net:1685:7)
+[2m2:15:29 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: [39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1118:18)
+    at afterConnectMultiple (node:net:1685:7)
+[2m2:15:38 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: [39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1118:18)
+    at afterConnectMultiple (node:net:1685:7)
+[2m2:15:42 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /documents?limit=20&offset=0[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1118:18)
+    at afterConnectMultiple (node:net:1685:7)
+[2m2:15:42 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /documents?limit=20&offset=0[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1118:18)
+    at afterConnectMultiple (node:net:1685:7)
+[2m2:16:37 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /documents?limit=20&offset=0[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1118:18)
+    at afterConnectMultiple (node:net:1685:7)
+[2m2:16:37 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /documents?limit=20&offset=0[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1118:18)
+    at afterConnectMultiple (node:net:1685:7)
+[2m2:16:39 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles.css[22m
+[2m2:16:46 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /docs[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1118:18)
+    at afterConnectMultiple (node:net:1685:7)
+[2m2:16:48 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /docs[39m
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1118:18)
+    at afterConnectMultiple (node:net:1685:7)

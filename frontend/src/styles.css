@@ -337,22 +337,103 @@ select:focus {
   flex-direction: column;
   gap: 12px;
 }
-.result {
+.result-card {
+  display: flex;
+  gap: 14px;
   background: var(--panel-2);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 12px 14px;
+  padding: 14px;
+}
+.result-cover {
+  width: 58px;
+  height: 78px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+}
+.result-body {
+  flex: 1;
+  min-width: 0;
 }
 .result-head {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.chunk-badge {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--accent);
+  background: rgba(76, 141, 255, 0.14);
+  border: 1px solid rgba(76, 141, 255, 0.4);
+  border-radius: 6px;
+  padding: 2px 10px;
+}
+.sim-badge {
+  font-size: 12px;
+  color: var(--muted);
+}
+.result-doc {
+  display: flex;
+  align-items: center;
   gap: 12px;
-  margin-bottom: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.doc-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.link-download {
+  background: none;
+  border: none;
+  color: var(--accent);
+  padding: 0;
+  font-size: 13px;
+}
+.link-download:hover:not(:disabled) {
+  background: none;
+  text-decoration: underline;
+}
+.result-meta {
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.result-details > summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 13px;
+  user-select: none;
+  list-style: none;
+}
+.result-details > summary::-webkit-details-marker {
+  display: none;
+}
+.result-details > summary::before {
+  content: "▸ ";
+}
+.result-details[open] > summary::before {
+  content: "▾ ";
 }
 .result-text {
-  margin: 0;
+  margin: 8px 0 0;
   white-space: pre-wrap;
+  word-break: break-word;
   line-height: 1.5;
+  font-size: 13px;
+  max-height: 360px;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
 }
 .history-detail {
   padding: 8px 0;

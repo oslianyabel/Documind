@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { api, ApiError } from "../api";
 import { useApiKey, useAuth } from "../auth";
@@ -11,8 +11,44 @@ export function SearchPage() {
   const [result, setResult] = useState<SearchResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
-
   const [downloading, setDownloading] = useState<string | null>(null);
+  // document name -> object URL of its cover image (only for docs that have one)
+  const [coverUrls, setCoverUrls] = useState<Record<string, string>>({});
+
+  // Covers are behind the authenticated /cover endpoint, so we fetch each one
+  // as a blob and expose it as an object URL, revoking them when results change.
+  useEffect(() => {
+    if (!result) {
+      setCoverUrls({});
+      return;
+    }
+    const withCover = result.documents.filter((doc) => doc.has_cover_image);
+    if (withCover.length === 0) {
+      setCoverUrls({});
+      return;
+    }
+    let cancelled = false;
+    const created: string[] = [];
+    (async () => {
+      const entries: [string, string][] = [];
+      for (const doc of withCover) {
+        try {
+          const blob = await api.downloadCover(apiKey, doc.name);
+          if (cancelled) return;
+          const url = URL.createObjectURL(blob);
+          created.push(url);
+          entries.push([doc.name, url]);
+        } catch {
+          // A missing/failed cover just means no thumbnail; ignore.
+        }
+      }
+      if (!cancelled) setCoverUrls(Object.fromEntries(entries));
+    })();
+    return () => {
+      cancelled = true;
+      created.forEach(URL.revokeObjectURL);
+    };
+  }, [result, apiKey]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -48,6 +84,8 @@ export function SearchPage() {
       setDownloading(null);
     }
   }
+
+  const docsByName = new Map((result?.documents ?? []).map((doc) => [doc.name, doc]));
 
   return (
     <div className="stack">
@@ -90,43 +128,61 @@ export function SearchPage() {
                 <span className="muted">tiempo total</span>
               </div>
             </div>
-            {result.documents.length > 0 && (
-              <div className="chips">
-                {result.documents.map((doc) => (
-                  <button
-                    key={doc.id}
-                    className="chip chip-download"
-                    onClick={() => void handleDownload(doc)}
-                    disabled={downloading === doc.id}
-                    title={`Descargar ${doc.original_filename}`}
-                  >
-                    ⬇ {doc.name}
-                    {downloading === doc.id ? " …" : ""}
-                  </button>
-                ))}
-              </div>
-            )}
           </section>
 
           <section className="panel">
             <h2>Fragmentos relevantes</h2>
             <ol className="results">
-              {result.chunks.map((chunk, index) => (
-                <li key={index} className="result">
-                  <div className="result-head">
-                    <strong>{chunk.document_name}</strong>
-                    <span className="muted">
-                      pág. {chunk.start_page}
-                      {chunk.end_page !== chunk.start_page ? `–${chunk.end_page}` : ""} · sim{" "}
-                      {chunk.similarity.toFixed(3)}
-                    </span>
-                  </div>
-                  <p className="result-text">{chunk.text}</p>
-                </li>
-              ))}
-              {result.chunks.length === 0 && (
-                <li className="muted">Sin coincidencias.</li>
-              )}
+              {result.chunks.map((chunk, index) => {
+                const doc = docsByName.get(chunk.document_name);
+                const coverUrl = coverUrls[chunk.document_name];
+                const pageRange =
+                  chunk.end_page !== chunk.start_page
+                    ? `${chunk.start_page}–${chunk.end_page}`
+                    : `${chunk.start_page}`;
+                return (
+                  <li key={index} className="result-card">
+                    {coverUrl && (
+                      <img
+                        className="result-cover"
+                        src={coverUrl}
+                        alt={`Portada de ${chunk.document_name}`}
+                      />
+                    )}
+                    <div className="result-body">
+                      <div className="result-head">
+                        <span className="chunk-badge">chunk{index + 1}</span>
+                        <span className="sim-badge">
+                          similitud {chunk.similarity.toFixed(3)}
+                        </span>
+                      </div>
+                      <div className="result-doc">
+                        <span className="doc-name" title={chunk.document_name}>
+                          📄 {chunk.document_name}
+                        </span>
+                        {doc && (
+                          <button
+                            className="link-download"
+                            onClick={() => void handleDownload(doc)}
+                            disabled={downloading === doc.id}
+                          >
+                            {downloading === doc.id ? "descargando…" : "⬇ descargar"}
+                          </button>
+                        )}
+                      </div>
+                      <div className="result-meta muted">
+                        pág. {pageRange} · líneas {chunk.start_line}–{chunk.end_line} ·{" "}
+                        {chunk.text.length.toLocaleString("es")} letras
+                      </div>
+                      <details className="result-details">
+                        <summary>Ver contenido del fragmento</summary>
+                        <pre className="result-text">{chunk.text}</pre>
+                      </details>
+                    </div>
+                  </li>
+                );
+              })}
+              {result.chunks.length === 0 && <li className="muted">Sin coincidencias.</li>}
             </ol>
           </section>
         </>

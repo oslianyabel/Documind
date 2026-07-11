@@ -127,6 +127,19 @@ export const api = {
     return response.blob();
   },
 
+  // The cover endpoint also needs the X-API-Key header, so it is fetched as a
+  // blob and turned into an object URL by the caller.
+  async downloadCover(apiKey: string, name: string): Promise<Blob> {
+    const response = await fetch(
+      `${BASE_URL}/documents/${encodeURIComponent(name)}/cover`,
+      { headers: { "X-API-Key": apiKey } },
+    );
+    if (!response.ok) {
+      throw new ApiError(response.status, `Error ${response.status} al cargar la portada`);
+    }
+    return response.blob();
+  },
+
   search(apiKey: string, query: string): Promise<SearchResponse> {
     return request<SearchResponse>(apiKey, "/search", {
       method: "POST",
