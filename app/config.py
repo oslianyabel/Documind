@@ -34,6 +34,10 @@ class Settings(BaseSettings):
 
     data_dir: Path = Path("./data")
 
+    # Set to "/api" in production (behind the frontend proxy) so FastAPI's docs
+    # and OpenAPI URLs carry the prefix. Empty for direct local access.
+    root_path: str = ""
+
     telegram_bot_token: str | None = None
     telegram_chat_id: str | None = None
 

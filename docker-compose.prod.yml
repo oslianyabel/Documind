@@ -50,6 +50,8 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:?set OPENAI_API_KEY in .env}
       SUMMARY_MODEL: ${SUMMARY_MODEL:-gpt-4o-mini}
       DATA_DIR: /app/data
+      # Mounted under /api by the frontend proxy; makes /api/docs work.
+      ROOT_PATH: /api
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
     volumes:

@@ -35,6 +35,9 @@ app = FastAPI(
     description="Microservicio de recomendación de documentos con embeddings en PostgreSQL",
     version="0.1.0",
     lifespan=lifespan,
+    # Set ROOT_PATH=/api in production so Swagger (/api/docs) points its spec
+    # and "Try it out" calls at the /api prefix the frontend proxy strips.
+    root_path=settings.root_path,
 )
 
 authenticated = [Depends(require_api_key)]
