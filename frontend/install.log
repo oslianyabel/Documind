@@ -1,0 +1,21 @@
+npm error code ERESOLVE
+npm error ERESOLVE unable to resolve dependency tree
+npm error
+npm error While resolving: launch-intelligence-frontend@0.1.0
+npm error Found: vite@undefined
+npm error node_modules/vite
+npm error   dev vite@"^5.4.11" from the root project
+npm error
+npm error Could not resolve dependency:
+npm error peer vite@"^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0" from @vitejs/plugin-react@4.7.0
+npm error node_modules/@vitejs/plugin-react
+npm error   dev @vitejs/plugin-react@"^4.3.4" from the root project
+npm error
+npm error Fix the upstream dependency conflict, or retry
+npm error this command with --force or --legacy-peer-deps
+npm error to accept an incorrect (and potentially broken) dependency resolution.
+npm error
+npm error
+npm error For a full report see:
+npm error C:\Users\lilia\AppData\Local\npm-cache\_logs\2026-07-10T15_49_45_937Z-eresolve-report.txt
+npm error A complete log of this run can be found in: C:\Users\lilia\AppData\Local\npm-cache\_logs\2026-07-10T15_49_45_937Z-debug-0.log

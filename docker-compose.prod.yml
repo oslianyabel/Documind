@@ -1,0 +1,89 @@
+# Production stack: React frontend + API + ingestion worker + PostgreSQL/pgvector
+# + Redis on the same Docker network.
+# On the VPS:  docker compose -f docker-compose.prod.yml up -d --build
+# Point your reverse proxy (Caddy/Nginx, TLS) at 127.0.0.1:8080 (the frontend).
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: launch-intelligence-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-documind}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-documind}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./sql/init_database.sql:/docker-entrypoint-initdb.d/init_database.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-documind} -d ${POSTGRES_DB:-documind}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # No host port published: only the API (same network) reaches the DB.
+
+  redis:
+    image: redis:7-alpine
+    container_name: launch-intelligence-redis
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # No host port published: only API and worker (same network) reach it.
+
+  api:
+    build: .
+    container_name: launch-intelligence-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment: &app_environment
+      # Reaches postgres/redis by service name over the internal network.
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-documind}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-documind}
+      REDIS_URL: redis://redis:6379
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?set OPENAI_API_KEY in .env}
+      SUMMARY_MODEL: ${SUMMARY_MODEL:-gpt-4o-mini}
+      DATA_DIR: /app/data
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+    volumes:
+      - documents:/app/data
+    # No host port: the API stays internal. The frontend reverse-proxies
+    # /api → api:8000 over the Docker network, so it is never exposed directly.
+
+  frontend:
+    build: ./frontend
+    container_name: launch-intelligence-frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      # Bind to localhost only; an external reverse proxy (Caddy/Nginx)
+      # terminates TLS and forwards to this port.
+      - "127.0.0.1:8080:80"
+
+  worker:
+    build: .
+    container_name: launch-intelligence-worker
+    restart: unless-stopped
+    command: ["arq", "app.worker.WorkerSettings"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment: *app_environment
+    volumes:
+      # Shares the documents volume: reads the PDFs the API stored.
+      - documents:/app/data
+
+volumes:
+  pgdata:
+  redisdata:
+  documents:

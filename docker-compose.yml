@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: documind-postgres
+    environment:
+      POSTGRES_USER: documind
+      POSTGRES_PASSWORD: documind
+      POSTGRES_DB: documind
+    ports:
+      # Host port 5433 to avoid clashing with a locally installed PostgreSQL
+      - "5433:5432"
+    volumes:
+      - documind_pgdata:/var/lib/postgresql/data
+      - ./sql/init_database.sql:/docker-entrypoint-initdb.d/init_database.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U documind -d documind"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: documind-redis
+    ports:
+      # Host port 6380 to avoid clashing with a locally installed Redis
+      - "6380:6379"
+    volumes:
+      - documind_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  documind_pgdata:
+  documind_redis:

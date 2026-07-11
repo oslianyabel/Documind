@@ -1,0 +1,18 @@
+
+> launch-intelligence-frontend@0.1.0 dev
+> vite
+
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m404[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5173[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[2m4:21:22 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Login.tsx, /src/pages/SearchPage.tsx, /src/pages/HistoryPage.tsx, /src/pages/DocumentsPage.tsx[22m
+[2m4:21:32 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/SearchPage.tsx[22m
+[2m4:21:42 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/SearchPage.tsx[22m
+[2m4:21:50 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/SearchPage.tsx[22m
+[2m4:22:12 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles.css[22m
+[2m5:56:46 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Login.tsx, /src/pages/SearchPage.tsx, /src/pages/HistoryPage.tsx, /src/pages/DocumentsPage.tsx[22m
+[2m5:57:08 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/DocumentsPage.tsx[22m
+[2m5:57:16 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/DocumentsPage.tsx[22m
+[2m5:57:26 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles.css[22m
