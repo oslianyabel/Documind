@@ -31,6 +31,9 @@ from app.services.document_ingestion import DocumentUpload, record_upload, regis
 from app.worker import INGEST_DOCUMENT_JOB
 
 router = APIRouter(prefix="/documents", tags=["documents"])
+# Registered WITHOUT the X-API-Key dependency (see main.py): file downloads
+# must be reachable with a plain link (no custom headers).
+public_router = APIRouter(prefix="/documents", tags=["documents"])
 
 PDF_MIME_TYPE = "application/pdf"
 
@@ -248,7 +251,7 @@ async def get_document(session: SessionDep, name: str) -> Document:
     return await _get_active_document(session, name)
 
 
-@router.get("/{name}/download")
+@public_router.get("/{name}/download")
 async def download_document(session: SessionDep, name: str) -> FileResponse:
     document = await _get_active_document(session, name)
     path = Path(document.storage_path)
@@ -262,7 +265,7 @@ async def download_document(session: SessionDep, name: str) -> FileResponse:
     )
 
 
-@router.get("/{name}/cover")
+@public_router.get("/{name}/cover")
 async def download_cover_image(session: SessionDep, name: str) -> FileResponse:
     document = await _get_active_document(session, name)
     has_cover_file = document.cover_image_path is not None and await anyio.Path(

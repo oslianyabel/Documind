@@ -48,6 +48,8 @@ app.include_router(history.router, dependencies=authenticated)
 app.include_router(documents.router, dependencies=authenticated)
 app.include_router(uploads.router, dependencies=authenticated)
 app.include_router(settings_router.router, dependencies=authenticated)
+# Public: document/cover downloads work with a plain link (no X-API-Key).
+app.include_router(documents.public_router)
 
 # Parsed at import time so a malformed API_ALLOWED_HOSTS fails fast on startup.
 ALLOWED_CLIENT_NETWORKS = parse_allowlist(settings.api_allowed_hosts)

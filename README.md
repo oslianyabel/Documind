@@ -75,15 +75,15 @@ Decisiones de diseño:
 
 ## Endpoints
 
-Todos (excepto `/health`) requieren el header `X-API-Key`. **Referencia completa para integradores/frontends en [docs/API.md](docs/API.md)** (modelos, ejemplos de respuesta, flujos y manejo de errores); interactiva en `/api/docs` (Swagger); colección de Postman lista para importar en [docs/Launch-Intelligence.postman_collection.json](docs/Launch-Intelligence.postman_collection.json).
+Todos requieren el header `X-API-Key`, excepto `/health` y las descargas (`/download`, `/cover`), que son públicas. **Referencia completa para integradores/frontends en [docs/API.md](docs/API.md)** (modelos, ejemplos de respuesta, flujos y manejo de errores); interactiva en `/api/docs` (Swagger); colección de Postman lista para importar en [docs/Launch-Intelligence.postman_collection.json](docs/Launch-Intelligence.postman_collection.json).
 
 | Método | Ruta | Descripción |
 |---|---|---|
 | `POST` | `/documents` | Subir uno o varios PDF (multipart, campo `files` repetible) → `202` con resultado por archivo (`processing` / `skipped_duplicate` / `failed`). Campos opcionales: `name` y `cover_image` (solo con 1 archivo), `publication_year`, `author`, `description`, `category`, `language` |
 | `GET` | `/documents` | Listar con filtros: `name`, `status`, `min/max_pages`, `min/max_chunks`, `min/max_size_bytes`, `uploaded_from/to`, `summary`, `publication_year`, `author`, `description`, `category`, `language`, `has_cover_image`, `min/max_search_hits`, `limit`, `offset` |
 | `GET` | `/documents/{name}` | Obtener metadatos de un documento por nombre |
-| `GET` | `/documents/{name}/download` | Descargar el archivo original íntegro |
-| `GET` | `/documents/{name}/cover` | Descargar la imagen de portada |
+| `GET` | `/documents/{name}/download` | Descargar el archivo original íntegro (**público**, sin API key: enlace directo compartible) |
+| `GET` | `/documents/{name}/cover` | Descargar la imagen de portada (**público**) |
 | `DELETE` | `/documents/{name}` | Eliminación lógica |
 | `POST` | `/search` | Búsqueda semántica. Body: `{"query": "..."}`. Devuelve chunks, documentos, `answer` (agente RAG, `null` = NOT_FOUND) e `in_scope` (validación de alcance) |
 | `GET` | `/uploads` | Historial de subidas: `outcome`, `from_date`, `to_date`, `limit`, `offset` |

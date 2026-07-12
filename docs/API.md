@@ -6,15 +6,16 @@ Guía para construir un cliente/frontend contra la API. Complemento interactivo:
 
 | Entorno | Base URL |
 |---|---|
-| Producción, vía proxy del frontend (**recomendada**: lleva TLS) | `https://<dominio>/api` |
+| Producción, túnel Cloudflare **dedicado a la API** (TLS, sin prefijo) | `https://<tunel-api>.trycloudflare.com` |
+| Producción, vía proxy del frontend (TLS, con prefijo) | `https://<dominio-frontend>/api` |
 | Producción, puerto directo de la API (HTTP plano; para LAN/VPN o si pones TLS delante) | `http://<host-vps>:8000` |
 | Desarrollo (API directa) | `http://localhost:8010` |
 
-Todas las rutas de este documento son relativas a esa base. Nota sobre el puerto directo: los endpoints funcionan idénticos, pero el Swagger interactivo solo renderiza bien por la ruta con proxy (`https://<dominio>/api/docs`).
+Todas las rutas de este documento son relativas a esa base. ⚠️ Por el túnel dedicado y el puerto directo las rutas van **sin** el prefijo `/api` (`https://<tunel-api>…/documents`); ese prefijo solo existe en la vía del proxy del frontend. El Swagger interactivo solo renderiza bien por la ruta con proxy (`…/api/docs`).
 
 ## Autenticación
 
-Todos los endpoints **excepto `GET /health`** exigen el header:
+Todos los endpoints exigen el header — **excepto** `GET /health`, `GET /documents/{name}/download` y `GET /documents/{name}/cover`, que son públicos:
 
 ```
 X-API-Key: <clave>
@@ -63,7 +64,7 @@ Siempre JSON: `{"detail": "mensaje"}`.
   "has_cover_image": true,
   "search_hit_count": 4,                // nº de búsquedas en las que ha aparecido
   "created_at": "2026-07-10T12:00:00Z",
-  "download_url": "/documents/informe-2024/download"  // relativa a la base; requiere X-API-Key
+  "download_url": "/documents/informe-2024/download"  // relativa a la base; pública (sin X-API-Key)
 }
 ```
 
@@ -131,11 +132,11 @@ Devuelve el `Document`. Úsalo para el polling del estado tras subir.
 
 ### `GET /documents/{name}/download` — descargar el PDF original
 
-Respuesta binaria (`application/pdf`, `Content-Disposition` con el nombre original). **Requiere el header `X-API-Key`**, por lo que un `<a href>` directo no sirve: hacer `fetch` con el header, obtener el `Blob` y disparar la descarga (`URL.createObjectURL`). El campo `download_url` de cada documento ya trae esta ruta lista para concatenar a la base.
+Respuesta binaria (`application/pdf`, `Content-Disposition` con el nombre original). **Público (sin `X-API-Key`)**: un `<a href="{base}{download_url}">` directo funciona, y la URL es compartible. El campo `download_url` de cada documento ya trae la ruta lista para concatenar a la base.
 
 ### `GET /documents/{name}/cover` — portada
 
-Imagen binaria. `404` si el documento no tiene portada (comprobar antes `has_cover_image`). Igual que la descarga: fetch con header → blob → object URL.
+Imagen binaria. `404` si el documento no tiene portada (comprobar antes `has_cover_image`). También **pública**: puede usarse directamente como `src` de un `<img>`.
 
 ### `DELETE /documents/{name}`
 
@@ -263,7 +264,7 @@ Body: `{ "prompt": "Solo se permiten consultas sobre…" }` (máx. 8000 caracter
 
 **Buscar y descargar un resultado**
 1. `POST /search` → renderizar `answer` + `chunks` (ordenados por similitud).
-2. Para descargar un documento del resultado: `fetch(base + doc.download_url, { headers: { "X-API-Key": key } })` → blob → `URL.createObjectURL` → `<a download>` programático.
+2. Para descargar un documento del resultado basta un enlace directo: `<a href="{base}{doc.download_url}">` (la descarga es pública, no requiere header).
 
 **Manejo del 401**
 Cualquier 401 ⇒ borrar la clave almacenada y volver a la pantalla de introducción de clave.
