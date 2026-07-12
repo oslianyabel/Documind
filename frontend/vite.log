@@ -73,3 +73,11 @@ AggregateError [ECONNREFUSED]:
 [2m6:23:20 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/HistoryPage.tsx[22m
 [2m6:24:25 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
 [2m6:25:50 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles.css[22m
+[2m5:43:24 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Login.tsx, /src/pages/SearchPage.tsx, /src/pages/HistoryPage.tsx, /src/pages/DocumentsPage.tsx[22m
+[2m5:43:24 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Login.tsx, /src/pages/SearchPage.tsx, /src/pages/HistoryPage.tsx, /src/pages/DocumentsPage.tsx[22m
+[2m5:43:37 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Login.tsx, /src/pages/SearchPage.tsx, /src/pages/HistoryPage.tsx, /src/pages/DocumentsPage.tsx[22m
+[2m5:44:30 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2m5:44:38 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/DocumentsPage.tsx[22m
+[2m5:44:40 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/DocumentsPage.tsx[22m
+[2m5:44:47 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/DocumentsPage.tsx[22m
+[2m5:45:02 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/styles.css[22m

@@ -1,5 +1,6 @@
 import type {
   DocumentListResponse,
+  DocumentResponse,
   DocumentUploadFields,
   SearchHistoryResponse,
   SearchResponse,
@@ -9,7 +10,17 @@ import type {
 } from "./types";
 
 // Same-origin by default: nginx (prod) / Vite (dev) proxy /api → backend.
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
+
+// Downloads and covers are public endpoints (no X-API-Key), so plain
+// hrefs/img-srcs work — no blob fetching needed.
+export function downloadHref(downloadUrl: string): string {
+  return `${BASE_URL}${downloadUrl}`;
+}
+
+export function coverHref(name: string): string {
+  return `${BASE_URL}/documents/${encodeURIComponent(name)}/cover`;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -118,6 +129,10 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt }),
     });
+  },
+
+  getDocument(apiKey: string, name: string): Promise<DocumentResponse> {
+    return request<DocumentResponse>(apiKey, `/documents/${encodeURIComponent(name)}`);
   },
 
   deleteDocument(apiKey: string, name: string): Promise<void> {

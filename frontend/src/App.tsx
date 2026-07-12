@@ -2,6 +2,7 @@ import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 
 import { useAuth } from "./auth";
 import { Login } from "./components/Login";
+import { DocumentDetailPage } from "./pages/DocumentDetailPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { SearchPage } from "./pages/SearchPage";
@@ -31,6 +32,7 @@ export function App() {
       <main className="content">
         <Routes>
           <Route path="/documents" element={<DocumentsPage />} />
+          <Route path="/documents/:name" element={<DocumentDetailPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />

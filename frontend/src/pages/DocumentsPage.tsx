@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { api, ApiError } from "../api";
 import { useApiKey, useAuth } from "../auth";
@@ -10,6 +11,7 @@ const PAGE_SIZE = 20;
 export function DocumentsPage() {
   const apiKey = useApiKey();
   const { clearApiKey } = useAuth();
+  const navigate = useNavigate();
 
   const [documents, setDocuments] = useState<DocumentResponse[]>([]);
   const [total, setTotal] = useState(0);
@@ -123,7 +125,12 @@ export function DocumentsPage() {
           </thead>
           <tbody>
             {documents.map((doc) => (
-              <tr key={doc.id}>
+              <tr
+                key={doc.id}
+                className="row-link"
+                title={`Ver detalle de ${doc.name}`}
+                onClick={() => navigate(`/documents/${encodeURIComponent(doc.name)}`)}
+              >
                 <td>
                   <strong>{doc.name}</strong>
                   {doc.summary && <div className="muted clamp">{doc.summary}</div>}
@@ -139,7 +146,13 @@ export function DocumentsPage() {
                 <td>{doc.search_hit_count}</td>
                 <td className="muted">{formatDate(doc.created_at)}</td>
                 <td>
-                  <button className="danger" onClick={() => void handleDelete(doc.name)}>
+                  <button
+                    className="danger"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handleDelete(doc.name);
+                    }}
+                  >
                     Eliminar
                   </button>
                 </td>
