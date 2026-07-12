@@ -12,6 +12,7 @@ from app.core.exceptions import (
     DocumentNotFoundError,
     InvalidDocumentError,
 )
+from app.core.host_access import is_ip_allowed, parse_allowlist, resolve_client_ip
 from app.core.notifications import notify_critical_error
 from app.core.queue import create_queue_pool
 from app.db.database import init_database
@@ -47,6 +48,30 @@ app.include_router(history.router, dependencies=authenticated)
 app.include_router(documents.router, dependencies=authenticated)
 app.include_router(uploads.router, dependencies=authenticated)
 app.include_router(settings_router.router, dependencies=authenticated)
+
+# Parsed at import time so a malformed API_ALLOWED_HOSTS fails fast on startup.
+ALLOWED_CLIENT_NETWORKS = parse_allowlist(settings.api_allowed_hosts)
+
+
+@app.middleware("http")
+async def restrict_client_hosts(request: Request, call_next):  # noqa: ANN001, ANN201
+    """Reject requests from clients outside API_ALLOWED_HOSTS (default: all).
+
+    /health stays open for readiness probes. This complements — never
+    replaces — the X-API-Key authentication.
+    """
+    if ALLOWED_CLIENT_NETWORKS is not None and request.url.path != "/health":
+        client_ip = resolve_client_ip(
+            request.client.host if request.client else None,
+            request.headers.get("x-forwarded-for"),
+        )
+        if not is_ip_allowed(client_ip, ALLOWED_CLIENT_NETWORKS):
+            logger.warning("Rejected request from disallowed host %s", client_ip)
+            return JSONResponse(
+                status_code=status.HTTP_403_FORBIDDEN,
+                content={"detail": "Client host not allowed"},
+            )
+    return await call_next(request)
 
 
 @app.get("/health", tags=["health"])

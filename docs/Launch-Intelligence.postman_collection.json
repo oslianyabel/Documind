@@ -1,0 +1,250 @@
+{
+  "info": {
+    "name": "Launch-Intelligence API",
+    "description": "Colección para probar todos los endpoints del microservicio de recomendación de documentos.\n\n**Configuración**: edita las variables de colección `base_url` (local: `http://localhost:8010`; producción: `https://<dominio>/api`) y `api_key` (generada con `scripts/create_api_key.py`).\n\nTodos los endpoints excepto `GET /health` requieren el header `X-API-Key` (configurado a nivel de colección).\n\nReferencia completa: `docs/API.md`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      { "key": "key", "value": "X-API-Key", "type": "string" },
+      { "key": "value", "value": "{{api_key}}", "type": "string" },
+      { "key": "in", "value": "header", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8010", "type": "string" },
+    { "key": "api_key", "value": "PON-AQUI-TU-API-KEY", "type": "string" },
+    { "key": "document_name", "value": "mi-documento", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Salud",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] },
+            "description": "Único endpoint sin autenticación. Respuesta esperada: {\"status\": \"ok\"}."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documentos",
+      "item": [
+        {
+          "name": "Subir documentos (multipart, multi-archivo)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "files", "type": "file", "src": [], "description": "PDF a indexar. Duplica esta fila para subir varios archivos en el mismo request." },
+                { "key": "files", "type": "file", "src": [], "disabled": true, "description": "Segundo PDF (opcional): habilita la fila para subida múltiple." },
+                { "key": "name", "value": "mi-documento", "type": "text", "disabled": true, "description": "Solo aplica con 1 archivo; por defecto usa el nombre del archivo." },
+                { "key": "author", "value": "Autor de ejemplo", "type": "text", "disabled": true },
+                { "key": "publication_year", "value": "2024", "type": "text", "disabled": true },
+                { "key": "description", "value": "Descripción del documento", "type": "text", "disabled": true },
+                { "key": "category", "value": "informe", "type": "text", "disabled": true },
+                { "key": "language", "value": "es", "type": "text", "disabled": true },
+                { "key": "cover_image", "type": "file", "src": [], "disabled": true, "description": "Portada; solo aplica con 1 archivo." }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/documents", "host": ["{{base_url}}"], "path": ["documents"] },
+            "description": "Devuelve 202 con resultado por archivo: `processing` (aceptado, ingesta en segundo plano), `skipped_duplicate` (mismo contenido ya indexado, no se reprocesa) o `failed`. Tras subir, haz polling de GET /documents/{name} hasta que status != processing."
+          }
+        },
+        {
+          "name": "Listar documentos (con filtros)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/documents?limit=20&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["documents"],
+              "query": [
+                { "key": "limit", "value": "20" },
+                { "key": "offset", "value": "0" },
+                { "key": "name", "value": "informe", "disabled": true, "description": "Subcadena del nombre" },
+                { "key": "status", "value": "ready", "disabled": true, "description": "processing | ready | failed" },
+                { "key": "min_pages", "value": "1", "disabled": true },
+                { "key": "max_pages", "value": "100", "disabled": true },
+                { "key": "min_chunks", "value": "1", "disabled": true },
+                { "key": "max_chunks", "value": "500", "disabled": true },
+                { "key": "min_size_bytes", "value": "0", "disabled": true },
+                { "key": "max_size_bytes", "value": "10000000", "disabled": true },
+                { "key": "uploaded_from", "value": "2026-01-01T00:00:00", "disabled": true },
+                { "key": "uploaded_to", "value": "2026-12-31T23:59:59", "disabled": true },
+                { "key": "summary", "value": "diagnóstico", "disabled": true, "description": "Subcadena del resumen IA" },
+                { "key": "publication_year", "value": "2024", "disabled": true },
+                { "key": "author", "value": "García", "disabled": true },
+                { "key": "description", "value": "texto", "disabled": true },
+                { "key": "category", "value": "informe", "disabled": true },
+                { "key": "language", "value": "es", "disabled": true },
+                { "key": "has_cover_image", "value": "true", "disabled": true },
+                { "key": "min_search_hits", "value": "1", "disabled": true },
+                { "key": "max_search_hits", "value": "100", "disabled": true }
+              ]
+            },
+            "description": "Habilita los filtros que quieras probar. limit: 1-100."
+          }
+        },
+        {
+          "name": "Detalle de un documento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_name}}",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "{{document_name}}"]
+            },
+            "description": "Úsalo como polling tras subir: status pasa de processing a ready (o failed)."
+          }
+        },
+        {
+          "name": "Descargar PDF original",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_name}}/download",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "{{document_name}}", "download"]
+            },
+            "description": "Respuesta binaria (application/pdf). En Postman usa 'Send and Download' para guardar el archivo."
+          }
+        },
+        {
+          "name": "Descargar portada",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_name}}/cover",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "{{document_name}}", "cover"]
+            },
+            "description": "Imagen binaria. 404 si el documento no tiene portada (ver has_cover_image)."
+          }
+        },
+        {
+          "name": "Eliminar documento (lógico)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_name}}",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "{{document_name}}"]
+            },
+            "description": "204 No Content. Eliminación lógica: desaparece de listados/búsquedas y el nombre queda libre."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Búsqueda semántica",
+      "item": [
+        {
+          "name": "Buscar (consulta en lenguaje natural)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"¿qué códigos de avería reporta el vehículo?\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/search", "host": ["{{base_url}}"], "path": ["search"] },
+            "description": "Devuelve: `in_scope` (false = rechazada por el agente de alcance, sin búsqueda), `answer` (respuesta del agente IA basada solo en los documentos; null = NOT_FOUND), `chunks` (top-K por similitud), `documents` (con download_url) y `metadata` (tokens + tiempo). embedding_tokens = 0 indica caché de embeddings."
+          }
+        },
+        {
+          "name": "Historial de búsquedas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/history?limit=50&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["search", "history"],
+              "query": [
+                { "key": "limit", "value": "50" },
+                { "key": "offset", "value": "0" },
+                { "key": "from_date", "value": "2026-01-01T00:00:00", "disabled": true },
+                { "key": "to_date", "value": "2026-12-31T23:59:59", "disabled": true }
+              ]
+            },
+            "description": "Cada entrada incluye la respuesta servida íntegra (con answer) y passed_validation (si pasó el agente de alcance). limit: 1-200."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Historial de subidas",
+      "item": [
+        {
+          "name": "Listar subidas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/uploads?limit=50&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["uploads"],
+              "query": [
+                { "key": "limit", "value": "50" },
+                { "key": "offset", "value": "0" },
+                { "key": "outcome", "value": "failed", "disabled": true, "description": "processing | success | skipped_duplicate | failed" },
+                { "key": "from_date", "value": "2026-01-01T00:00:00", "disabled": true },
+                { "key": "to_date", "value": "2026-12-31T23:59:59", "disabled": true }
+              ]
+            },
+            "description": "Una fila por archivo subido. outcome=failed incluye error_traceback con el traceback completo."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ajustes",
+      "item": [
+        {
+          "name": "Leer alcance de búsquedas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/settings/search-scope",
+              "host": ["{{base_url}}"],
+              "path": ["settings", "search-scope"]
+            },
+            "description": "prompt null/vacío = validación de alcance desactivada (se permite cualquier consulta)."
+          }
+        },
+        {
+          "name": "Actualizar alcance de búsquedas",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prompt\": \"Solo se permiten consultas sobre diagnóstico de vehículos, códigos de avería (DTC), sensores y el contenido de los informes técnicos indexados.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/settings/search-scope",
+              "host": ["{{base_url}}"],
+              "path": ["settings", "search-scope"]
+            },
+            "description": "Máx. 8000 caracteres. Enviar cadena vacía desactiva la validación. Las consultas fuera de alcance devuelven in_scope=false en /search y quedan con passed_validation=false en el historial."
+          }
+        }
+      ]
+    }
+  ]
+}

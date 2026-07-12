@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     summary_timeout_seconds: float = 60.0
 
     # Agents: document-grounded answers and search-scope validation.
-    agent_model: str = "gpt-4o-mini"
+    agent_model: str = "gpt-5.4-nano"
     agent_timeout_seconds: float = 45.0
     answer_max_tokens: int = 700
 
@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     # Set to "/api" in production (behind the frontend proxy) so FastAPI's docs
     # and OpenAPI URLs carry the prefix. Empty for direct local access.
     root_path: str = ""
+
+    # Comma-separated IPs/CIDRs allowed to call the API (e.g.
+    # "203.0.113.5, 10.0.0.0/8"). "*" = accessible from any client (default).
+    api_allowed_hosts: str = "*"
 
     telegram_bot_token: str | None = None
     telegram_chat_id: str | None = None

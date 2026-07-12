@@ -75,7 +75,7 @@ Decisiones de diseño:
 
 ## Endpoints
 
-Todos (excepto `/health`) requieren el header `X-API-Key`.
+Todos (excepto `/health`) requieren el header `X-API-Key`. **Referencia completa para integradores/frontends en [docs/API.md](docs/API.md)** (modelos, ejemplos de respuesta, flujos y manejo de errores); interactiva en `/api/docs` (Swagger); colección de Postman lista para importar en [docs/Launch-Intelligence.postman_collection.json](docs/Launch-Intelligence.postman_collection.json).
 
 | Método | Ruta | Descripción |
 |---|---|---|
@@ -109,6 +109,7 @@ Copiar `.env.example` a `.env` y completar:
 | `MAX_CHUNK_CHARS` | Tamaño máximo de chunk en caracteres (1200) |
 | `SEARCH_TOP_K` | Chunks devueltos por búsqueda (10) |
 | `DATA_DIR` | Carpeta local para archivos y portadas |
+| `API_ALLOWED_HOSTS` | IPs/CIDRs (separados por coma) con acceso a la API; `*` = cualquier cliente (defecto). `/health` queda siempre accesible. Complementa a la API key, no la sustituye |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Opcional: notificación de errores críticos al dev |
 
 ## Cómo ejecutar

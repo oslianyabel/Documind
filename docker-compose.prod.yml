@@ -49,6 +49,9 @@ services:
       REDIS_URL: redis://redis:6379
       OPENAI_API_KEY: ${OPENAI_API_KEY:?set OPENAI_API_KEY in .env}
       SUMMARY_MODEL: ${SUMMARY_MODEL:-gpt-4o-mini}
+      AGENT_MODEL: ${AGENT_MODEL:-gpt-5.4-nano}
+      SEARCH_TOP_K: ${SEARCH_TOP_K:-10}
+      API_ALLOWED_HOSTS: ${API_ALLOWED_HOSTS:-*}
       DATA_DIR: /app/data
       # Mounted under /api by the frontend proxy; makes /api/docs work.
       ROOT_PATH: /api
@@ -56,8 +59,13 @@ services:
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
     volumes:
       - documents:/app/data
-    # No host port: the API stays internal. The frontend reverse-proxies
-    # /api → api:8000 over the Docker network, so it is never exposed directly.
+    ports:
+      # Direct access for external API clients (bypasses the frontend proxy):
+      #   http://<host>:8000/documents, /search, ... (X-API-Key required).
+      # Note: plain HTTP. For internet-facing clients prefer the TLS route
+      # through the frontend proxy (https://<domain>/api/...), or put TLS in
+      # front of this port. Set API_BIND=127.0.0.1 in .env to keep it local.
+      - "${API_BIND:-0.0.0.0}:${API_PORT:-8000}:8000"
 
   frontend:
     build: ./frontend
