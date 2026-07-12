@@ -25,4 +25,9 @@ class SearchMetadata(BaseModel):
 class SearchResponse(BaseModel):
     chunks: list[SearchChunkResult]
     documents: list[DocumentResponse]
+    # Answer produced by the document-grounded agent; null when the answer is
+    # not contained in the documents (NOT_FOUND) or the query was out of scope.
+    answer: str | None = None
+    # False when the scope-validation agent rejected the query (no search ran).
+    in_scope: bool = True
     metadata: SearchMetadata

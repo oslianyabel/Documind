@@ -1,3 +1,5 @@
+import asyncio
+import traceback
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
@@ -11,20 +13,21 @@ from fastapi import (
     Form,
     HTTPException,
     Query,
-    Response,
     UploadFile,
     status,
 )
 from fastapi.responses import FileResponse
 from sqlalchemy import ColumnElement, and_, func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import DocumentNotFoundError, InvalidDocumentError
+from app.core.exceptions import DocumentNotFoundError, DocumindError
 from app.core.queue import get_queue_pool
-from app.db.database import get_session
-from app.db.models import Document
+from app.db.database import async_session_maker, get_session
+from app.db.models import Document, UploadOutcome
 from app.schemas.documents import DocumentFilters, DocumentListResponse, DocumentResponse
-from app.services.document_ingestion import DocumentUpload, register_document
+from app.schemas.uploads import UploadBatchResponse, UploadItemResult
+from app.services.document_ingestion import DocumentUpload, record_upload, register_document
 from app.worker import INGEST_DOCUMENT_JOB
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -45,12 +48,71 @@ async def _get_active_document(session: AsyncSession, name: str) -> Document:
     return document
 
 
-@router.post("", response_model=DocumentResponse, status_code=status.HTTP_202_ACCEPTED)
-async def upload_document(
-    session: SessionDep,
+async def _register_one_upload(
+    queue_pool: ArqRedis, upload: DocumentUpload
+) -> UploadItemResult:
+    """Register a single file with its own DB session (parallel-safe).
+
+    Every path leaves an upload_history row: 'skipped_duplicate', 'failed'
+    (with traceback) or 'processing' (closed later by the ingestion worker).
+    """
+    async with async_session_maker() as session:
+        try:
+            document, created = await register_document(session, upload)
+        except (DocumindError, SQLAlchemyError, OSError):
+            await session.rollback()
+            await record_upload(
+                session,
+                original_filename=upload.original_filename,
+                document_name=upload.name,
+                sha256=None,
+                outcome=UploadOutcome.FAILED,
+                error_traceback=traceback.format_exc(),
+            )
+            detail = traceback.format_exc(limit=0).strip().splitlines()[-1]
+            return UploadItemResult(
+                filename=upload.original_filename,
+                outcome=UploadOutcome.FAILED,
+                detail=detail,
+            )
+
+        if not created:
+            # Same content already exists: nothing is re-embedded.
+            await record_upload(
+                session,
+                original_filename=upload.original_filename,
+                document_name=document.name,
+                sha256=document.sha256,
+                outcome=UploadOutcome.SKIPPED_DUPLICATE,
+                document_id=document.id,
+            )
+            return UploadItemResult(
+                filename=upload.original_filename,
+                outcome=UploadOutcome.SKIPPED_DUPLICATE,
+                detail=f"El contenido ya existe como '{document.name}'",
+                document=DocumentResponse.model_validate(document),
+            )
+
+        entry = await record_upload(
+            session,
+            original_filename=upload.original_filename,
+            document_name=document.name,
+            sha256=document.sha256,
+            outcome=UploadOutcome.PROCESSING,
+            document_id=document.id,
+        )
+        await queue_pool.enqueue_job(INGEST_DOCUMENT_JOB, str(document.id), str(entry.id))
+        return UploadItemResult(
+            filename=upload.original_filename,
+            outcome=UploadOutcome.PROCESSING,
+            document=DocumentResponse.model_validate(document),
+        )
+
+
+@router.post("", response_model=UploadBatchResponse, status_code=status.HTTP_202_ACCEPTED)
+async def upload_documents(
     queue_pool: QueuePoolDep,
-    response: Response,
-    file: Annotated[UploadFile, File(description="Documento PDF a indexar")],
+    files: Annotated[list[UploadFile], File(description="Documentos PDF a indexar")],
     name: Annotated[str | None, Form(max_length=255)] = None,
     publication_year: Annotated[int | None, Form(ge=0, le=3000)] = None,
     author: Annotated[str | None, Form(max_length=255)] = None,
@@ -58,35 +120,58 @@ async def upload_document(
     category: Annotated[str | None, Form(max_length=128)] = None,
     language: Annotated[str | None, Form(max_length=64)] = None,
     cover_image: Annotated[UploadFile | None, File(description="Imagen de portada")] = None,
-) -> Document:
-    original_filename = file.filename or "document.pdf"
-    is_pdf = file.content_type == PDF_MIME_TYPE or original_filename.lower().endswith(".pdf")
-    if not is_pdf:
-        raise InvalidDocumentError("Only PDF documents are supported")
+) -> UploadBatchResponse:
+    """Upload one or many PDFs; each file is registered in parallel.
 
-    upload = DocumentUpload(
-        name=name or Path(original_filename).stem,
-        original_filename=original_filename,
-        mime_type=PDF_MIME_TYPE,
-        content=await file.read(),
-        cover_filename=cover_image.filename if cover_image is not None else None,
-        cover_content=await cover_image.read() if cover_image is not None else None,
-        publication_year=publication_year,
-        author=author,
-        description=description,
-        category=category,
-        language=language,
-    )
-    # Fast phase only: the heavy work (parse, embeddings, summary) runs in the
-    # arq worker; the client polls GET /documents/{name} until status='ready'.
-    document, created = await register_document(session, upload)
-    if created:
-        await queue_pool.enqueue_job(INGEST_DOCUMENT_JOB, str(document.id))
-    else:
-        # Same content already exists: return the existing document (200), not
-        # a freshly-accepted one (202). Nothing is re-embedded.
-        response.status_code = status.HTTP_200_OK
-    return document
+    `name` and `cover_image` only apply when a single file is uploaded; the
+    shared metadata fields (author, category, ...) apply to every file.
+    """
+    single_file = len(files) == 1
+    cover_filename = cover_image.filename if single_file and cover_image is not None else None
+    cover_content = await cover_image.read() if single_file and cover_image is not None else None
+
+    uploads: list[DocumentUpload] = []
+    for file in files:
+        original_filename = file.filename or "document.pdf"
+        is_pdf = (
+            file.content_type == PDF_MIME_TYPE or original_filename.lower().endswith(".pdf")
+        )
+        uploads.append(
+            DocumentUpload(
+                name=(name if single_file and name else Path(original_filename).stem),
+                original_filename=original_filename,
+                mime_type=PDF_MIME_TYPE if is_pdf else (file.content_type or "unknown"),
+                content=await file.read() if is_pdf else b"",
+                cover_filename=cover_filename,
+                cover_content=cover_content,
+                publication_year=publication_year,
+                author=author,
+                description=description,
+                category=category,
+                language=language,
+            )
+        )
+
+    async def handle(upload: DocumentUpload) -> UploadItemResult:
+        if upload.mime_type != PDF_MIME_TYPE:
+            async with async_session_maker() as session:
+                await record_upload(
+                    session,
+                    original_filename=upload.original_filename,
+                    document_name=upload.name,
+                    sha256=None,
+                    outcome=UploadOutcome.FAILED,
+                    error_traceback="InvalidDocumentError: Only PDF documents are supported",
+                )
+            return UploadItemResult(
+                filename=upload.original_filename,
+                outcome=UploadOutcome.FAILED,
+                detail="Solo se admiten documentos PDF",
+            )
+        return await _register_one_upload(queue_pool, upload)
+
+    items = await asyncio.gather(*(handle(upload) for upload in uploads))
+    return UploadBatchResponse(items=list(items))
 
 
 def _build_filter_conditions(filters: DocumentFilters) -> list[ColumnElement[bool]]:

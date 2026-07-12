@@ -131,6 +131,50 @@ class SearchHistory(Base):
     response: Mapped[dict] = mapped_column(JSONB)
     embedding_tokens: Mapped[int] = mapped_column(Integer)
     duration_ms: Mapped[float] = mapped_column()
+    # Whether the query passed the search-scope validation agent.
+    passed_validation: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default=text("true")
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class UploadOutcome(enum.StrEnum):
+    """Final result of a document upload request."""
+
+    PROCESSING = "processing"
+    SUCCESS = "success"
+    SKIPPED_DUPLICATE = "skipped_duplicate"
+    FAILED = "failed"
+
+
+class UploadHistory(Base):
+    __tablename__ = "upload_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    original_filename: Mapped[str] = mapped_column(String(512))
+    document_name: Mapped[str | None] = mapped_column(String(255))
+    sha256: Mapped[str | None] = mapped_column(String(64))
+    # UploadOutcome values; 'processing' until the ingestion worker finishes.
+    outcome: Mapped[str] = mapped_column(String(32), index=True)
+    error_traceback: Mapped[str | None] = mapped_column(Text)
+    document_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("documents.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AppSetting(Base):
+    """Key/value store for runtime-editable settings (e.g. search scope prompt)."""
+
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(128), primary_key=True)
+    value: Mapped[str] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

@@ -105,8 +105,31 @@ export function SearchPage() {
         {error && <p className="error">{error}</p>}
       </section>
 
-      {result && (
+      {result && !result.in_scope && (
+        <section className="panel">
+          <p className="notice notice-warn">
+            La consulta está <strong>fuera del alcance</strong> configurado para las búsquedas
+            y no se ha procesado.
+          </p>
+        </section>
+      )}
+
+      {result && result.in_scope && (
         <>
+          <section className="panel">
+            <h2>Respuesta</h2>
+            {result.answer ? (
+              <div className="answer-panel">
+                <span className="answer-label">Respuesta basada en los documentos</span>
+                {result.answer}
+              </div>
+            ) : (
+              <p className="notice notice-warn">
+                La respuesta no está contenida en los documentos indexados (NOT_FOUND).
+              </p>
+            )}
+          </section>
+
           <section className="panel">
             <div className="metrics">
               <div>

@@ -12,6 +12,7 @@ class SearchHistoryEntry(BaseModel):
     response: dict
     embedding_tokens: int
     duration_ms: float
+    passed_validation: bool
     created_at: datetime
 
 

@@ -18,8 +18,13 @@ logging.basicConfig(level=logging.INFO)
 INGEST_DOCUMENT_JOB = "ingest_document"
 
 
-async def ingest_document(_ctx: dict[str, Any], document_id: str) -> None:
-    await process_document(uuid.UUID(document_id))
+async def ingest_document(
+    _ctx: dict[str, Any], document_id: str, upload_history_id: str | None = None
+) -> None:
+    await process_document(
+        uuid.UUID(document_id),
+        uuid.UUID(upload_history_id) if upload_history_id else None,
+    )
 
 
 class WorkerSettings:

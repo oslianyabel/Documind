@@ -30,6 +30,14 @@ async def init_database() -> None:
                 "ADD COLUMN IF NOT EXISTS status VARCHAR(16) NOT NULL DEFAULT 'ready'"
             )
         )
+        # Migration for databases created before scope validation existed:
+        # historical searches were never rejected, hence DEFAULT true.
+        await conn.execute(
+            text(
+                "ALTER TABLE search_history "
+                "ADD COLUMN IF NOT EXISTS passed_validation BOOLEAN NOT NULL DEFAULT true"
+            )
+        )
 
 
 async def get_session() -> AsyncIterator[AsyncSession]:

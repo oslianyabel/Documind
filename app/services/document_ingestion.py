@@ -1,8 +1,10 @@
 import asyncio
 import hashlib
 import logging
+import traceback
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 import aiofiles
 from openai import OpenAIError
@@ -13,7 +15,7 @@ from app.config import settings
 from app.core.exceptions import DocumentNameConflictError, DocumindError
 from app.core.notifications import notify_critical_error, notify_document_uploaded
 from app.db.database import async_session_maker
-from app.db.models import Chunk, Document, DocumentStatus
+from app.db.models import Chunk, Document, DocumentStatus, UploadHistory, UploadOutcome
 from app.services.chunking import build_chunks
 from app.services.embeddings import embed_texts
 from app.services.pdf_parser import parse_pdf
@@ -113,6 +115,50 @@ async def register_document(
     return document, True
 
 
+async def record_upload(
+    session: AsyncSession,
+    *,
+    original_filename: str,
+    document_name: str | None,
+    sha256: str | None,
+    outcome: UploadOutcome,
+    document_id: uuid.UUID | None = None,
+    error_traceback: str | None = None,
+) -> UploadHistory:
+    """Audit trail: one row per uploaded file with its (initial) outcome."""
+    entry = UploadHistory(
+        original_filename=original_filename,
+        document_name=document_name,
+        sha256=sha256,
+        outcome=outcome.value,
+        document_id=document_id,
+        error_traceback=error_traceback,
+        finished_at=None if outcome is UploadOutcome.PROCESSING else datetime.now(UTC),
+    )
+    session.add(entry)
+    await session.commit()
+    await session.refresh(entry)
+    return entry
+
+
+async def _finish_upload_record(
+    session: AsyncSession,
+    upload_history_id: uuid.UUID,
+    outcome: UploadOutcome,
+    error_traceback: str | None = None,
+) -> None:
+    await session.execute(
+        update(UploadHistory)
+        .where(UploadHistory.id == upload_history_id)
+        .values(
+            outcome=outcome.value,
+            error_traceback=error_traceback,
+            finished_at=datetime.now(UTC),
+        )
+    )
+    await session.commit()
+
+
 async def _mark_document_failed(session: AsyncSession, document_id: uuid.UUID) -> None:
     await session.execute(
         update(Document)
@@ -154,8 +200,14 @@ async def _ingest(session: AsyncSession, document: Document) -> None:
     await session.commit()
 
 
-async def process_document(document_id: uuid.UUID) -> None:
-    """Heavy phase, run by the arq worker: parse, chunk, embed and summarize."""
+async def process_document(
+    document_id: uuid.UUID, upload_history_id: uuid.UUID | None = None
+) -> None:
+    """Heavy phase, run by the arq worker: parse, chunk, embed and summarize.
+
+    Also closes the upload_history record: 'success' on completion, 'failed'
+    with the full traceback otherwise.
+    """
     async with async_session_maker() as session:
         document = await session.get(Document, document_id)
         if document is None or document.deleted_at is not None:
@@ -168,10 +220,18 @@ async def process_document(document_id: uuid.UUID) -> None:
         try:
             await _ingest(session, document)
         except (DocumindError, OpenAIError, OSError) as error:
+            error_traceback = traceback.format_exc()
             await session.rollback()
             await _mark_document_failed(session, document_id)
+            if upload_history_id is not None:
+                await _finish_upload_record(
+                    session, upload_history_id, UploadOutcome.FAILED, error_traceback
+                )
             logger.exception("Ingestion failed for document %s", document_id)
             failure_reason = f"{type(error).__name__}: {error}"
+        else:
+            if upload_history_id is not None:
+                await _finish_upload_record(session, upload_history_id, UploadOutcome.SUCCESS)
 
     if failure_reason is not None:
         await notify_critical_error(

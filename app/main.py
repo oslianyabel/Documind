@@ -15,7 +15,8 @@ from app.core.exceptions import (
 from app.core.notifications import notify_critical_error
 from app.core.queue import create_queue_pool
 from app.db.database import init_database
-from app.routers import documents, history, search
+from app.routers import documents, history, search, uploads
+from app.routers import settings as settings_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -44,6 +45,8 @@ authenticated = [Depends(require_api_key)]
 app.include_router(search.router, dependencies=authenticated)
 app.include_router(history.router, dependencies=authenticated)
 app.include_router(documents.router, dependencies=authenticated)
+app.include_router(uploads.router, dependencies=authenticated)
+app.include_router(settings_router.router, dependencies=authenticated)
 
 
 @app.get("/health", tags=["health"])

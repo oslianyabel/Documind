@@ -68,6 +68,10 @@ Decisiones de diseño:
 - **Búsqueda**: distancia coseno de pgvector sobre todos los chunks de documentos activos y `ready`, top 10, con índice HNSW. Cada búsqueda incrementa `search_hit_count` en los documentos con coincidencia y se archiva íntegra (consulta + respuesta) para auditoría.
 - **Caché de embeddings de consulta (Redis)**: el vector de cada consulta de búsqueda se cachea en Redis con TTL (clave = hash de `modelo + consulta`). Una búsqueda repetida evita la llamada a OpenAI (0 tokens, respuesta en ms). Solo aplica a `embed_query`; los embeddings de chunks se generan una vez y viven en Postgres. Si Redis falla, la búsqueda cae con gracia a una llamada en vivo. Configurable con `EMBEDDING_CACHE_ENABLED` / `EMBEDDING_CACHE_TTL_SECONDS`.
 - **Autenticación**: header `X-API-Key`. Las claves se almacenan hasheadas (SHA-256) en la tabla `api_keys`, con revocación (`is_active`) y registro de último uso.
+- **Agente de respuesta (RAG)**: en cada búsqueda, un agente IA responde la consulta usando exclusivamente los 10 chunks recuperados; si la respuesta no está contenida en ellos devuelve `NOT_FOUND` (campo `answer: null`). La respuesta viaja en el endpoint y se persiste en el histórico.
+- **Agente de alcance**: un prompt persistido en BD (`/settings/search-scope`, editable desde la UI) define qué consultas son válidas; un agente valida cada consulta antes de procesarla (`in_scope`), y el veredicto queda en el histórico (`passed_validation`). Alcance vacío = validación desactivada. Fail-open: si el agente falla, la búsqueda continúa.
+- **Historial de subidas**: cada archivo subido registra su resultado en `upload_history` — `success`, `skipped_duplicate` (dedup por SHA-256) o `failed` con el traceback completo del error.
+- **Subida múltiple**: `POST /documents` acepta varios PDF en un solo request y los registra en paralelo (sesiones de BD independientes); la ingesta pesada ya era paralela vía worker.
 
 ## Endpoints
 
@@ -75,13 +79,16 @@ Todos (excepto `/health`) requieren el header `X-API-Key`.
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| `POST` | `/documents` | Subir PDF (multipart) → `202 Accepted` con `status="processing"`; la ingesta corre en el worker. Campos opcionales: `name`, `publication_year`, `author`, `description`, `category`, `language`, `cover_image` |
+| `POST` | `/documents` | Subir uno o varios PDF (multipart, campo `files` repetible) → `202` con resultado por archivo (`processing` / `skipped_duplicate` / `failed`). Campos opcionales: `name` y `cover_image` (solo con 1 archivo), `publication_year`, `author`, `description`, `category`, `language` |
 | `GET` | `/documents` | Listar con filtros: `name`, `status`, `min/max_pages`, `min/max_chunks`, `min/max_size_bytes`, `uploaded_from/to`, `summary`, `publication_year`, `author`, `description`, `category`, `language`, `has_cover_image`, `min/max_search_hits`, `limit`, `offset` |
 | `GET` | `/documents/{name}` | Obtener metadatos de un documento por nombre |
 | `GET` | `/documents/{name}/download` | Descargar el archivo original íntegro |
 | `GET` | `/documents/{name}/cover` | Descargar la imagen de portada |
 | `DELETE` | `/documents/{name}` | Eliminación lógica |
-| `POST` | `/search` | Búsqueda semántica. Body: `{"query": "texto en lenguaje natural"}` |
+| `POST` | `/search` | Búsqueda semántica. Body: `{"query": "..."}`. Devuelve chunks, documentos, `answer` (agente RAG, `null` = NOT_FOUND) e `in_scope` (validación de alcance) |
+| `GET` | `/uploads` | Historial de subidas: `outcome`, `from_date`, `to_date`, `limit`, `offset` |
+| `GET` | `/settings/search-scope` | Leer el prompt que define el alcance de las búsquedas |
+| `PUT` | `/settings/search-scope` | Actualizar el prompt de alcance (vacío = validación desactivada) |
 | `GET` | `/search/history` | Historial de búsquedas: `from_date`, `to_date`, `limit`, `offset` |
 | `GET` | `/health` | Health check (sin auth) |
 
@@ -149,6 +156,20 @@ curl -X POST http://localhost:8000/search \
   -H "X-API-Key: <tu-api-key>" -H "Content-Type: application/json" \
   -d '{"query": "una historia sobre varias generaciones de una familia en un pueblo"}'
 ```
+
+## Backup y migración de servidor
+
+Los datos viven en dos sitios: PostgreSQL (documentos, chunks + embeddings, api keys, históricos, ajustes) y el volumen `documents` (PDFs y portadas). Los scripts exportan/importan ambos:
+
+```bash
+# En el servidor origen (stack corriendo):
+./scripts/export_backup.sh                    # → backups/<fecha>/database.dump + documents.tar.gz
+
+# En el servidor destino (tras clonar, crear .env y levantar el stack):
+./scripts/import_backup.sh backups/<fecha>    # pg_restore --clean + restauración de archivos
+```
+
+El formato es `pg_dump -Fc` (comprimido, portable entre versiones de Postgres compatibles) + tar.gz del directorio de datos. Las API keys se conservan, así que los clientes no necesitan re-emitirse claves.
 
 ## Tests y linting
 

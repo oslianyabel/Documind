@@ -48,6 +48,8 @@ export interface SearchMetadata {
 export interface SearchResponse {
   chunks: SearchChunkResult[];
   documents: DocumentResponse[];
+  answer: string | null;
+  in_scope: boolean;
   metadata: SearchMetadata;
 }
 
@@ -57,6 +59,7 @@ export interface SearchHistoryEntry {
   response: SearchResponse;
   embedding_tokens: number;
   duration_ms: number;
+  passed_validation: boolean;
   created_at: string;
 }
 
@@ -74,4 +77,40 @@ export interface DocumentUploadFields {
   description?: string;
   category?: string;
   language?: string;
+}
+
+export type UploadOutcome = "processing" | "success" | "skipped_duplicate" | "failed";
+
+export interface UploadItemResult {
+  filename: string;
+  outcome: UploadOutcome;
+  detail: string | null;
+  document: DocumentResponse | null;
+}
+
+export interface UploadBatchResponse {
+  items: UploadItemResult[];
+}
+
+export interface UploadHistoryEntry {
+  id: string;
+  original_filename: string;
+  document_name: string | null;
+  sha256: string | null;
+  outcome: UploadOutcome;
+  error_traceback: string | null;
+  document_id: string | null;
+  created_at: string;
+  finished_at: string | null;
+}
+
+export interface UploadHistoryResponse {
+  items: UploadHistoryEntry[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface SearchScopeResponse {
+  prompt: string | null;
 }

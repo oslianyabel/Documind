@@ -1,9 +1,11 @@
 import type {
   DocumentListResponse,
-  DocumentResponse,
   DocumentUploadFields,
   SearchHistoryResponse,
   SearchResponse,
+  SearchScopeResponse,
+  UploadBatchResponse,
+  UploadHistoryResponse,
 } from "./types";
 
 // Same-origin by default: nginx (prod) / Vite (dev) proxy /api → backend.
@@ -74,39 +76,48 @@ export const api = {
     );
   },
 
-  // Returns the document plus isDuplicate: the backend answers 200 when the
-  // same content already exists (deduplicated, not re-processed) and 202 when
-  // a new document was accepted for ingestion.
-  async uploadDocument(
+  // Multi-file upload: every file travels in one request and the backend
+  // registers them in parallel. Per-file outcomes come back in items[]
+  // (processing | skipped_duplicate | failed).
+  uploadDocuments(
     apiKey: string,
-    file: File,
+    files: File[],
     fields: DocumentUploadFields,
     cover: File | null,
-  ): Promise<{ document: DocumentResponse; isDuplicate: boolean }> {
+  ): Promise<UploadBatchResponse> {
     const form = new FormData();
-    form.append("file", file);
+    for (const file of files) form.append("files", file);
     for (const [key, value] of Object.entries(fields)) {
       if (value) form.append(key, value);
     }
     if (cover) form.append("cover_image", cover);
-
-    const response = await fetch(`${BASE_URL}/documents`, {
+    return request<UploadBatchResponse>(apiKey, "/documents", {
       method: "POST",
-      headers: { "X-API-Key": apiKey },
       body: form,
     });
-    if (!response.ok) {
-      let detail = `Error ${response.status}`;
-      try {
-        const body = await response.json();
-        if (body?.detail) detail = String(body.detail);
-      } catch {
-        // response body was not JSON; keep the generic message
-      }
-      throw new ApiError(response.status, detail);
-    }
-    const document = (await response.json()) as DocumentResponse;
-    return { document, isDuplicate: response.status === 200 };
+  },
+
+  uploadHistory(
+    apiKey: string,
+    filters: { outcome?: string; limit: number; offset: number },
+  ): Promise<UploadHistoryResponse> {
+    const params = new URLSearchParams();
+    if (filters.outcome) params.set("outcome", filters.outcome);
+    params.set("limit", String(filters.limit));
+    params.set("offset", String(filters.offset));
+    return request<UploadHistoryResponse>(apiKey, `/uploads?${params.toString()}`);
+  },
+
+  getSearchScope(apiKey: string): Promise<SearchScopeResponse> {
+    return request<SearchScopeResponse>(apiKey, "/settings/search-scope");
+  },
+
+  updateSearchScope(apiKey: string, prompt: string): Promise<SearchScopeResponse> {
+    return request<SearchScopeResponse>(apiKey, "/settings/search-scope", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
   },
 
   deleteDocument(apiKey: string, name: string): Promise<void> {

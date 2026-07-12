@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     summary_max_input_chars: int = 12_000
     summary_timeout_seconds: float = 60.0
 
+    # Agents: document-grounded answers and search-scope validation.
+    agent_model: str = "gpt-4o-mini"
+    agent_timeout_seconds: float = 45.0
+    answer_max_tokens: int = 700
+
     max_chunk_chars: int = 1200
     search_top_k: int = 10
 

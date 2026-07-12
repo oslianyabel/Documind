@@ -5,6 +5,7 @@ import { Login } from "./components/Login";
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { SearchPage } from "./pages/SearchPage";
+import { SettingsPage } from "./pages/SettingsPage";
 
 export function App() {
   const { apiKey, clearApiKey } = useAuth();
@@ -21,6 +22,7 @@ export function App() {
           <NavLink to="/documents">Documentos</NavLink>
           <NavLink to="/search">Búsqueda</NavLink>
           <NavLink to="/history">Historial</NavLink>
+          <NavLink to="/settings">Ajustes</NavLink>
         </nav>
         <button className="link-button" onClick={clearApiKey}>
           Cerrar sesión
@@ -31,6 +33,7 @@ export function App() {
           <Route path="/documents" element={<DocumentsPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/history" element={<HistoryPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/documents" replace />} />
         </Routes>
       </main>

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { api, ApiError } from "../api";
 import { useApiKey, useAuth } from "../auth";
 import { formatBytes, formatDate, statusLabel } from "../format";
-import type { DocumentResponse } from "../types";
+import type { DocumentResponse, UploadItemResult } from "../types";
 
 const PAGE_SIZE = 20;
 
@@ -183,7 +183,7 @@ function UploadForm({
   onUploaded: () => void;
   onError: (message: string) => void;
 }) {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [cover, setCover] = useState<File | null>(null);
   const [name, setName] = useState("");
   const [author, setAuthor] = useState("");
@@ -191,19 +191,19 @@ function UploadForm({
   const [category, setCategory] = useState("");
   const [language, setLanguage] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [notice, setNotice] = useState<{ text: string; warn: boolean } | null>(null);
+  const [results, setResults] = useState<UploadItemResult[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!file) return;
+    if (files.length === 0) return;
     setUploading(true);
-    setNotice(null);
+    setResults([]);
     onError("");
     try {
-      const { document, isDuplicate } = await api.uploadDocument(
+      const batch = await api.uploadDocuments(
         apiKey,
-        file,
+        files,
         {
           name: name || undefined,
           author: author || undefined,
@@ -214,27 +214,17 @@ function UploadForm({
         cover,
       );
       formRef.current?.reset();
-      setFile(null);
+      setFiles([]);
       setCover(null);
       setName("");
       setAuthor("");
       setYear("");
       setCategory("");
       setLanguage("");
-      if (isDuplicate) {
-        setNotice({
-          text: `Este documento ya existía como «${document.name}» y no se ha vuelto a procesar.`,
-          warn: true,
-        });
-      } else {
-        setNotice({
-          text: `«${document.name}» subido correctamente; se está indexando.`,
-          warn: false,
-        });
-      }
+      setResults(batch.items);
       onUploaded();
     } catch (err) {
-      onError(err instanceof Error ? err.message : "Error al subir el documento.");
+      onError(err instanceof Error ? err.message : "Error al subir los documentos.");
     } finally {
       setUploading(false);
     }
@@ -242,19 +232,20 @@ function UploadForm({
 
   return (
     <section className="panel">
-      <h2>Subir documento</h2>
+      <h2>Subir documentos</h2>
       <form ref={formRef} className="upload-form" onSubmit={handleSubmit}>
         <div className="field">
-          <label>PDF *</label>
+          <label>PDF(s) *</label>
           <input
             type="file"
             accept="application/pdf,.pdf"
+            multiple
             required
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
           />
         </div>
         <div className="field">
-          <label>Nombre (opcional)</label>
+          <label>Nombre (solo 1 archivo)</label>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Auto del archivo" />
         </div>
         <div className="field">
@@ -274,7 +265,7 @@ function UploadForm({
           <input value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="es" />
         </div>
         <div className="field">
-          <label>Portada (opcional)</label>
+          <label>Portada (solo 1 archivo)</label>
           <input
             type="file"
             accept="image/*"
@@ -282,17 +273,41 @@ function UploadForm({
           />
         </div>
         <div className="field field-submit">
-          <button type="submit" disabled={uploading || !file}>
-            {uploading ? "Subiendo…" : "Subir e indexar"}
+          <button type="submit" disabled={uploading || files.length === 0}>
+            {uploading
+              ? "Subiendo…"
+              : files.length > 1
+                ? `Subir e indexar (${files.length})`
+                : "Subir e indexar"}
           </button>
         </div>
       </form>
-      {notice && (
-        <p className={notice.warn ? "notice notice-warn" : "notice notice-ok"}>{notice.text}</p>
+      {results.length > 0 && (
+        <ul className="upload-results">
+          {results.map((item, index) => (
+            <li
+              key={index}
+              className={
+                item.outcome === "failed"
+                  ? "notice notice-error"
+                  : item.outcome === "skipped_duplicate"
+                    ? "notice notice-warn"
+                    : "notice notice-ok"
+              }
+            >
+              <strong>{item.filename}</strong>{" "}
+              {item.outcome === "processing" && "→ aceptado; se está indexando."}
+              {item.outcome === "skipped_duplicate" &&
+                `→ omitido: ${item.detail ?? "el contenido ya existía"}.`}
+              {item.outcome === "failed" && `→ falló: ${item.detail ?? "error desconocido"}.`}
+            </li>
+          ))}
+        </ul>
       )}
       <p className="muted">
-        La ingesta (embeddings + resumen) corre en segundo plano; el estado pasará de
-        «Procesando» a «Listo» automáticamente.
+        Puedes seleccionar varios PDF a la vez; se procesan en paralelo. La ingesta
+        (embeddings + resumen) corre en segundo plano; el estado pasará de «Procesando» a
+        «Listo» automáticamente.
       </p>
     </section>
   );
