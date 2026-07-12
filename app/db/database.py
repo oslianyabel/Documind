@@ -38,6 +38,20 @@ async def init_database() -> None:
                 "ADD COLUMN IF NOT EXISTS passed_validation BOOLEAN NOT NULL DEFAULT true"
             )
         )
+        # Migration: summary success tracking. Backfill is idempotent — any
+        # document that has a summary necessarily generated it successfully.
+        await conn.execute(
+            text(
+                "ALTER TABLE documents "
+                "ADD COLUMN IF NOT EXISTS summary_generated BOOLEAN NOT NULL DEFAULT false"
+            )
+        )
+        await conn.execute(
+            text(
+                "UPDATE documents SET summary_generated = true "
+                "WHERE summary IS NOT NULL AND summary_generated = false"
+            )
+        )
 
 
 async def get_session() -> AsyncIterator[AsyncSession]:

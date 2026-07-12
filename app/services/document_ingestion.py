@@ -168,15 +168,26 @@ async def _mark_document_failed(session: AsyncSession, document_id: uuid.UUID) -
     await session.commit()
 
 
+async def _generate_summary_safe(document_text: str) -> str | None:
+    """Generate the AI summary; None on failure (never breaks ingestion)."""
+    try:
+        return await generate_summary(document_text)
+    except OpenAIError:
+        logger.exception("Summary generation failed; document stays searchable")
+        return None
+
+
 async def _ingest(session: AsyncSession, document: Document) -> None:
     async with aiofiles.open(document.storage_path, "rb") as file:
         content = await file.read()
 
     parsed = parse_pdf(content)
     chunks = build_chunks(parsed.lines, max_chars=settings.max_chunk_chars)
+    # Embeddings are mandatory (their failure fails the ingestion); a summary
+    # failure is recorded via summary_generated=False and retried on demand.
     embedding_result, summary = await asyncio.gather(
         embed_texts([chunk.content for chunk in chunks]),
-        generate_summary(parsed.full_text),
+        _generate_summary_safe(parsed.full_text),
     )
 
     session.add_all(
@@ -195,9 +206,33 @@ async def _ingest(session: AsyncSession, document: Document) -> None:
     document.page_count = parsed.page_count
     document.chunk_count = len(chunks)
     document.summary = summary
+    document.summary_generated = summary is not None
     document.embedding_tokens_used = embedding_result.total_tokens
     document.status = DocumentStatus.READY.value
     await session.commit()
+
+
+async def ensure_document_summary(
+    session: AsyncSession, document: Document
+) -> tuple[str, bool]:
+    """Return the document summary, generating (and persisting) it if missing.
+
+    Returns (summary, generated_now). Raises OpenAIError/InvalidDocumentError
+    if the on-demand generation fails — the caller decides the HTTP mapping.
+    """
+    if document.summary is not None:
+        return document.summary, False
+
+    async with aiofiles.open(document.storage_path, "rb") as file:
+        content = await file.read()
+    parsed = parse_pdf(content)
+    summary = await generate_summary(parsed.full_text)
+
+    document.summary = summary
+    document.summary_generated = True
+    await session.commit()
+    await session.refresh(document)
+    return summary, True
 
 
 async def process_document(

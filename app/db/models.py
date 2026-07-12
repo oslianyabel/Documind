@@ -50,6 +50,12 @@ class Document(Base):
         String(16), default=DocumentStatus.PROCESSING.value, server_default=text("'processing'")
     )
     summary: Mapped[str | None] = mapped_column(Text)
+    # Whether the AI summary was generated successfully. A summary failure no
+    # longer fails the whole ingestion; it can be retried via
+    # POST /documents/{name}/summary.
+    summary_generated: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false")
+    )
     embedding_tokens_used: Mapped[int] = mapped_column(Integer, default=0)
     publication_year: Mapped[int | None] = mapped_column(Integer)
     author: Mapped[str | None] = mapped_column(String(255))

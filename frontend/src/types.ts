@@ -11,6 +11,7 @@ export interface DocumentResponse {
   page_count: number;
   chunk_count: number;
   summary: string | null;
+  summary_generated: boolean;
   embedding_tokens_used: number;
   publication_year: number | null;
   author: string | null;

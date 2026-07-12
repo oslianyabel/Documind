@@ -16,6 +16,7 @@ def _make_document(name: str) -> dict:
         "page_count": 1,
         "chunk_count": 1,
         "summary": None,
+        "summary_generated": False,
         "embedding_tokens_used": 0,
         "publication_year": None,
         "author": None,

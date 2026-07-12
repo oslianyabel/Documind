@@ -21,6 +21,9 @@ class DocumentResponse(BaseModel):
     page_count: int
     chunk_count: int
     summary: str | None
+    # Whether the AI summary was generated successfully during ingestion (or
+    # later via POST /documents/{name}/summary).
+    summary_generated: bool
     embedding_tokens_used: int
     publication_year: int | None
     author: str | None
@@ -47,6 +50,13 @@ class DocumentListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class DocumentSummaryResponse(BaseModel):
+    document_name: str
+    summary: str
+    # True when this request generated the summary; False when it already existed.
+    generated_now: bool
 
 
 class DocumentFilters(BaseModel):

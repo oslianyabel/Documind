@@ -54,7 +54,8 @@ Siempre JSON: `{"detail": "mensaje"}`.
   "status": "processing | ready | failed",
   "page_count": 19,                     // 0 mientras status = processing
   "chunk_count": 32,                    // 0 mientras status = processing
-  "summary": "Resumen generado por IA…" , // null mientras procesa
+  "summary": "Resumen generado por IA…" , // null mientras procesa o si su generación falló
+  "summary_generated": true,            // false = el resumen falló/está pendiente; regenerable vía POST /documents/{name}/summary
   "embedding_tokens_used": 10945,
   "publication_year": 2024,             // opcionales: null si no se aportaron
   "author": "…",
@@ -137,6 +138,17 @@ Respuesta binaria (`application/pdf`, `Content-Disposition` con el nombre origin
 ### `GET /documents/{name}/cover` — portada
 
 Imagen binaria. `404` si el documento no tiene portada (comprobar antes `has_cover_image`). También **pública**: puede usarse directamente como `src` de un `<img>`.
+
+### `POST /documents/{name}/summary` — verificar/generar el resumen IA
+
+Si el resumen ya existe lo devuelve tal cual; si no (falló durante la ingesta), lo **genera y persiste** en el momento.
+
+```jsonc
+{ "document_name": "informe-2024", "summary": "…", "generated_now": false }
+// generated_now: true = se generó en esta petición; false = ya existía
+```
+
+Errores propios: `409` si el documento aún está `processing` (el resumen llegará al terminar la ingesta) · `502` si el proveedor de IA falla al generarlo.
 
 ### `DELETE /documents/{name}`
 

@@ -137,6 +137,19 @@
           }
         },
         {
+          "name": "Verificar/generar resumen IA",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/documents/{{document_name}}/summary",
+              "host": ["{{base_url}}"],
+              "path": ["documents", "{{document_name}}", "summary"]
+            },
+            "description": "Si el resumen existe lo devuelve (generated_now=false); si no, lo genera con IA y lo persiste (generated_now=true). 409 si el documento aún está en 'processing'; 502 si el proveedor de IA falla."
+          }
+        },
+        {
           "name": "Eliminar documento (lógico)",
           "request": {
             "method": "DELETE",

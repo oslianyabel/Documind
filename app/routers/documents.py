@@ -17,6 +17,7 @@ from fastapi import (
     status,
 )
 from fastapi.responses import FileResponse
+from openai import OpenAIError
 from sqlalchemy import ColumnElement, and_, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,10 +25,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import DocumentNotFoundError, DocumindError
 from app.core.queue import get_queue_pool
 from app.db.database import async_session_maker, get_session
-from app.db.models import Document, UploadOutcome
-from app.schemas.documents import DocumentFilters, DocumentListResponse, DocumentResponse
+from app.db.models import Document, DocumentStatus, UploadOutcome
+from app.schemas.documents import (
+    DocumentFilters,
+    DocumentListResponse,
+    DocumentResponse,
+    DocumentSummaryResponse,
+)
 from app.schemas.uploads import UploadBatchResponse, UploadItemResult
-from app.services.document_ingestion import DocumentUpload, record_upload, register_document
+from app.services.document_ingestion import (
+    DocumentUpload,
+    ensure_document_summary,
+    record_upload,
+    register_document,
+)
 from app.worker import INGEST_DOCUMENT_JOB
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -249,6 +260,30 @@ async def list_documents(
 @router.get("/{name}", response_model=DocumentResponse)
 async def get_document(session: SessionDep, name: str) -> Document:
     return await _get_active_document(session, name)
+
+
+@router.post("/{name}/summary", response_model=DocumentSummaryResponse)
+async def ensure_summary(session: SessionDep, name: str) -> DocumentSummaryResponse:
+    """Verify the document's AI summary exists; generate and persist it if not.
+
+    Returns generated_now=False when the summary already existed.
+    """
+    document = await _get_active_document(session, name)
+    if document.status == DocumentStatus.PROCESSING.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="El documento aún se está ingestando; el resumen llegará al terminar",
+        )
+    try:
+        summary, generated_now = await ensure_document_summary(session, document)
+    except OpenAIError as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="No se pudo generar el resumen (fallo del proveedor de IA)",
+        ) from error
+    return DocumentSummaryResponse(
+        document_name=document.name, summary=summary, generated_now=generated_now
+    )
 
 
 @public_router.get("/{name}/download")
