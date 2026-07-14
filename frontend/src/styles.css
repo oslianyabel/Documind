@@ -49,6 +49,27 @@ button.danger {
   border-color: var(--danger);
   padding: 5px 10px;
 }
+button.secondary {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}
+button.secondary:hover:not(:disabled) {
+  background: var(--panel-2);
+}
+.button-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+code {
+  font-family: ui-monospace, "SFMono-Regular", "Cascadia Code", Menlo, monospace;
+  font-size: 0.9em;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
 button.danger:hover:not(:disabled) {
   background: rgba(255, 92, 114, 0.12);
 }

@@ -1,3 +1,5 @@
+import pytest
+
 from app.services.agents import (
     ANSWER_NOT_FOUND,
     ANSWER_PROMPT,
@@ -5,6 +7,7 @@ from app.services.agents import (
     DocumentFragment,
     build_answer_context,
     parse_scope_verdict,
+    validate_answer_prompt,
 )
 
 
@@ -26,6 +29,26 @@ def test_answer_prompt_includes_not_found_instruction() -> None:
     prompt = ANSWER_PROMPT.format(context="ctx", query="q")
     assert ANSWER_NOT_FOUND in prompt
     assert "EXCLUSIVAMENTE" in prompt
+
+
+# uv run pytest -s tests/test_agents.py::test_validate_answer_prompt_accepts_valid_template
+def test_validate_answer_prompt_accepts_valid_template() -> None:
+    validate_answer_prompt("Responde a {query} usando {context}.")
+    validate_answer_prompt(ANSWER_PROMPT)  # the built-in default is valid
+
+
+# uv run pytest -s tests/test_agents.py::test_validate_answer_prompt_requires_placeholders
+def test_validate_answer_prompt_requires_placeholders() -> None:
+    with pytest.raises(ValueError, match=r"\{context\}"):
+        validate_answer_prompt("Responde a {query}.")
+    with pytest.raises(ValueError, match=r"\{query\}"):
+        validate_answer_prompt("Usa {context}.")
+
+
+# uv run pytest -s tests/test_agents.py::test_validate_answer_prompt_rejects_stray_braces
+def test_validate_answer_prompt_rejects_stray_braces() -> None:
+    with pytest.raises(ValueError, match="no válidas"):
+        validate_answer_prompt("{context} {query} {otra}")
 
 
 # uv run pytest -s tests/test_agents.py::test_scope_prompt_embeds_scope_and_query

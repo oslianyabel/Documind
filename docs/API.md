@@ -257,6 +257,29 @@ Query params: `outcome` (`processing|success|skipped_duplicate|failed`), `from_d
 
 Body: `{ "prompt": "Solo se permiten consultas sobre…" }` (máx. 8000 caracteres; cadena vacía desactiva la validación). Respuesta: el mismo shape que el GET.
 
+### `GET /settings/answer-prompt`
+
+Plantilla que usa el agente que redacta la respuesta (`answer` en `/search`) a partir de la consulta y de los fragmentos recuperados.
+
+```jsonc
+{
+  "prompt": "Eres un asistente que responde…\n<fragmentos>\n{context}\n</fragmentos>\n<consulta>\n{query}\n</consulta>",
+  "is_default": true   // true = no hay override; se muestra la plantilla por defecto integrada
+}
+```
+
+La plantilla incluye dos marcadores obligatorios: `{context}` (los fragmentos recuperados, cada uno como `[documento: <nombre>]\n<texto>`) y `{query}` (la consulta del cliente).
+
+### `PUT /settings/answer-prompt`
+
+Body: `{ "prompt": "…{context}…{query}…" }` (máx. 8000 caracteres). Reglas:
+
+- Debe contener **`{context}`** y **`{query}`**; para llaves literales, escríbelas como `{{` y `}}`.
+- Una cadena **vacía** restablece la plantilla por defecto (`is_default: true` en la respuesta).
+- Plantilla inválida (marcador faltante o llaves `{ }` sueltas) → **`422 {"detail": "…"}`**.
+
+Respuesta: el mismo shape que el GET (`prompt` efectivo + `is_default`).
+
 ---
 
 ## Salud

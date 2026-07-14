@@ -1,4 +1,5 @@
 import type {
+  AnswerPromptResponse,
   DocumentListResponse,
   DocumentResponse,
   DocumentUploadFields,
@@ -125,6 +126,19 @@ export const api = {
 
   updateSearchScope(apiKey: string, prompt: string): Promise<SearchScopeResponse> {
     return request<SearchScopeResponse>(apiKey, "/settings/search-scope", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
+  },
+
+  getAnswerPrompt(apiKey: string): Promise<AnswerPromptResponse> {
+    return request<AnswerPromptResponse>(apiKey, "/settings/answer-prompt");
+  },
+
+  // An empty prompt resets to the built-in default template.
+  updateAnswerPrompt(apiKey: string, prompt: string): Promise<AnswerPromptResponse> {
+    return request<AnswerPromptResponse>(apiKey, "/settings/answer-prompt", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt }),

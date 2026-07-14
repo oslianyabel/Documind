@@ -258,6 +258,36 @@
             },
             "description": "Máx. 8000 caracteres. Enviar cadena vacía desactiva la validación. Las consultas fuera de alcance devuelven in_scope=false en /search y quedan con passed_validation=false en el historial."
           }
+        },
+        {
+          "name": "Leer prompt del agente de respuestas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/settings/answer-prompt",
+              "host": ["{{base_url}}"],
+              "path": ["settings", "answer-prompt"]
+            },
+            "description": "Plantilla que redacta la respuesta (campo `answer` de /search) a partir de la consulta y los fragmentos. is_default=true significa que se usa la plantilla por defecto integrada."
+          }
+        },
+        {
+          "name": "Actualizar prompt del agente de respuestas",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prompt\": \"Responde a la consulta usando EXCLUSIVAMENTE los fragmentos.\\n\\n<fragmentos>\\n{context}\\n</fragmentos>\\n\\n<consulta>\\n{query}\\n</consulta>\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/settings/answer-prompt",
+              "host": ["{{base_url}}"],
+              "path": ["settings", "answer-prompt"]
+            },
+            "description": "Máx. 8000 caracteres. Debe incluir los marcadores {context} y {query} (usa {{ }} para llaves literales). Cadena vacía = restaurar la plantilla por defecto. Plantilla inválida → 422."
+          }
         }
       ]
     }

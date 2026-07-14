@@ -115,3 +115,8 @@ export interface UploadHistoryResponse {
 export interface SearchScopeResponse {
   prompt: string | null;
 }
+
+export interface AnswerPromptResponse {
+  prompt: string;
+  is_default: boolean;
+}

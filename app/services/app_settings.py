@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import AppSetting
 
 SEARCH_SCOPE_PROMPT_KEY = "search_scope_prompt"
+ANSWER_PROMPT_KEY = "answer_prompt"
 
 
 async def get_setting(session: AsyncSession, key: str) -> str | None:
@@ -27,3 +28,13 @@ async def get_search_scope_prompt(session: AsyncSession) -> str | None:
 
 async def set_search_scope_prompt(session: AsyncSession, prompt: str) -> None:
     await set_setting(session, SEARCH_SCOPE_PROMPT_KEY, prompt)
+
+
+async def get_answer_prompt(session: AsyncSession) -> str | None:
+    """Operator-overridden answer template, or None when using the default."""
+    return await get_setting(session, ANSWER_PROMPT_KEY)
+
+
+async def set_answer_prompt(session: AsyncSession, prompt: str) -> None:
+    """Persist the answer template; an empty string resets to the default."""
+    await set_setting(session, ANSWER_PROMPT_KEY, prompt)

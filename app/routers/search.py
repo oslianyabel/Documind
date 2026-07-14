@@ -12,7 +12,7 @@ from app.db.models import Chunk, Document, DocumentStatus, SearchHistory
 from app.schemas.documents import DocumentResponse
 from app.schemas.search import SearchChunkResult, SearchMetadata, SearchRequest, SearchResponse
 from app.services.agents import DocumentFragment, answer_from_documents, is_query_in_scope
-from app.services.app_settings import get_search_scope_prompt
+from app.services.app_settings import get_answer_prompt, get_search_scope_prompt
 from app.services.embeddings import embed_query
 
 router = APIRouter(prefix="/search", tags=["search"])
@@ -117,8 +117,10 @@ async def semantic_search(
             .values(search_hit_count=Document.search_hit_count + 1)
         )
 
-    # Grounded-answer agent: answers only from the retrieved fragments.
-    answer = await answer_from_documents(payload.query, fragments)
+    # Grounded-answer agent: answers only from the retrieved fragments,
+    # using the operator-configured template (falls back to the default).
+    answer_prompt = await get_answer_prompt(session)
+    answer = await answer_from_documents(payload.query, fragments, answer_prompt)
 
     total_time_ms = round((time.perf_counter() - started_at) * 1000, 2)
     response = SearchResponse(
