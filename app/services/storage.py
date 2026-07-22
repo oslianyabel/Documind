@@ -36,3 +36,14 @@ async def save_document_file(document_id: uuid.UUID, filename: str, content: byt
 
 async def save_cover_image(document_id: uuid.UUID, filename: str, content: bytes) -> Path:
     return await _save_bytes(settings.data_dir / COVERS_SUBDIR, document_id, filename, content)
+
+
+async def delete_document_files(storage_path: str | None, cover_path: str | None) -> None:
+    """Remove a document's stored file and cover from disk (best-effort).
+
+    Missing files are ignored so a partial cleanup never raises: the DB row is
+    already gone by the time this runs.
+    """
+    for path in (storage_path, cover_path):
+        if path:
+            await anyio.Path(path).unlink(missing_ok=True)

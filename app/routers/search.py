@@ -2,7 +2,7 @@ import time
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends
-from sqlalchemy import select, update
+from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -73,6 +73,13 @@ async def semantic_search(
 
     embedding_result = await embed_query(payload.query)
     query_vector = embedding_result.vectors[0]
+
+    # Widen the HNSW candidate list for this transaction so recall stays high
+    # on large corpora (pgvector's default ef_search=40 misses good matches at
+    # 1M+ vectors). SET LOCAL scopes it to the current transaction only.
+    # ef_search must be >= the number of rows requested, so clamp it up.
+    ef_search = max(settings.hnsw_ef_search, settings.search_top_k)
+    await session.execute(text(f"SET LOCAL hnsw.ef_search = {int(ef_search)}"))
 
     # Cosine distance over every chunk of every active, fully ingested
     # document; lower is closer. Documents still processing never surface.

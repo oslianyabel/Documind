@@ -152,7 +152,7 @@ Errores propios: `409` si el documento aún está `processing` (el resumen llega
 
 ### `DELETE /documents/{name}`
 
-`204 No Content`. Eliminación lógica: desaparece de listados, búsquedas y descargas; el nombre queda libre para reutilizarse.
+`204 No Content`. **Eliminación permanente**: borra el documento, todos sus chunks (y sus vectores del índice) y sus ficheros del disco; el nombre queda libre para reutilizarse. Las filas del historial de subidas se conservan con `document_id = null`. La operación es irreversible.
 
 ---
 

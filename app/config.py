@@ -36,6 +36,10 @@ class Settings(BaseSettings):
 
     max_chunk_chars: int = 1200
     search_top_k: int = 10
+    # HNSW candidate-list size at query time (pgvector `hnsw.ef_search`). Higher
+    # = better recall, slightly slower. Must be >= search_top_k; the search
+    # clamps it up if needed. Default 40 in pgvector; raised for large corpora.
+    hnsw_ef_search: int = 100
 
     data_dir: Path = Path("./data")
 

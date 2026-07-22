@@ -1,6 +1,5 @@
 import asyncio
 import traceback
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -39,6 +38,7 @@ from app.services.document_ingestion import (
     record_upload,
     register_document,
 )
+from app.services.storage import delete_document_files
 from app.worker import INGEST_DOCUMENT_JOB
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -315,6 +315,18 @@ async def download_cover_image(session: SessionDep, name: str) -> FileResponse:
 
 @router.delete("/{name}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_document(session: SessionDep, name: str) -> None:
+    """Permanently delete the document, its chunks and its files.
+
+    A hard delete keeps the vector index clean: soft-deleted chunks would stay
+    in the HNSW graph and keep competing (then get filtered out) in every
+    search. Chunks are removed by the ON DELETE CASCADE foreign key; the
+    upload-history rows survive with document_id set to NULL (audit trail).
+    """
     document = await _get_active_document(session, name)
-    document.deleted_at = datetime.now(UTC)
+    storage_path = document.storage_path
+    cover_path = document.cover_image_path
+    await session.delete(document)
     await session.commit()
+    # Files are removed only after the row is gone, so a failed unlink can never
+    # leave a dangling DB row pointing at a missing file.
+    await delete_document_files(storage_path, cover_path)

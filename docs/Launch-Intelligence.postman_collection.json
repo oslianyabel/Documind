@@ -159,7 +159,7 @@
               "host": ["{{base_url}}"],
               "path": ["documents", "{{document_name}}"]
             },
-            "description": "204 No Content. Eliminación lógica: desaparece de listados/búsquedas y el nombre queda libre."
+            "description": "204 No Content. Eliminación PERMANENTE e irreversible: borra el documento, sus chunks/vectores y los ficheros del disco. El nombre queda libre."
           }
         }
       ]
